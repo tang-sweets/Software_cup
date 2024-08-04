@@ -35,7 +35,7 @@ def handle_audio_input(api_key, message_history, username):
         if not st.session_state['is_recording']:
             st.session_state['is_recording'] = True
             st.info("聆听中。。。再次单击该按钮可停止。")
-            threading.Thread(target=record_audio, args=("static/wav/temp.wav", 30)).start()
+            threading.Thread(target=record_audio, args=("static/wav/temp.wav", 10)).start()
         else:
             st.session_state['is_recording'] = False
             st.info("语音输入完成。单击“📝”开始转录。")

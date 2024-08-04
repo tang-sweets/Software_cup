@@ -19,49 +19,6 @@ def strip_sup_tags(text):
 API_KEY = st.secrets["api"]["bianxie_key"]
 YI_API_KEY = st.secrets["api"]["Yi_key"]
 
-# 图像分类函数
-def classify_image(class_names, image):
-    num_classes = len(class_names)
-    model = resnet18(pretrained=True)
-    num_ftrs = model.fc.in_features
-    model.fc = torch.nn.Linear(num_ftrs, num_classes)
-    model.eval()
-
-    # 加载预训练的模型权重
-    checkpoint_path = './static/models/doctor.pth'
-    if os.path.exists(checkpoint_path):
-        checkpoint = torch.load(checkpoint_path, map_location='cpu')
-        model.load_state_dict(checkpoint)
-    else:
-        st.error("预训练模型权重文件未找到。")
-
-    # 图像预处理
-    data_transform = transforms.Compose([
-        transforms.Resize((224, 224)),  # 将图像调整为模型所需的大小
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ])
-
-    image = Image.open(image).convert("RGB")  # 将图像转换为RGB格式
-    image = data_transform(image).unsqueeze(0)
-    image = image.to('cpu')  # 将图像放到CPU上
-
-    # 在模型上进行预测
-    with torch.no_grad():
-        outputs = model(image)
-        probabilities = torch.nn.functional.softmax(outputs, dim=1)
-        _, predicted = torch.max(outputs.data, 1)
-
-    probabilities_dict = {class_names[i]: probabilities.tolist()[0][i] for i in range(num_classes)}
-
-    result = {
-        "class_index": predicted.item(),
-        "class_name": class_names[predicted.item()],
-        "probabilities": probabilities_dict
-    }
-
-    return result
-
 # 语音录制和转录函数
 def record_audio(file_path, duration=30, fs=44100):
     """录音函数，将录音保存到指定文件路径"""
@@ -122,7 +79,6 @@ def yi_stream_response(api_key, model, message_history, username):
     else:
         st.error(f"Error: {response.status_code}, {response.text}")
 
-
 def handle_audio_input(api_key, message_history, username):
     """处理音频输入并执行相应操作"""
     if 'is_recording' not in st.session_state:
@@ -164,7 +120,6 @@ def handle_ai_task(prompt, task_type, messages, stream=True):
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
     task_prompts = {
-        "皮肤病识别与治疗": "请根据上传的皮肤病图片，识别出皮肤病的类型，并提供详细的症状描述和治疗方法。",
         "推荐就诊科室": "根据用户描述的症状，推荐适合就诊的科室。",
         "疾病推断": "根据用户描述的症状，推断可能的疾病。如果信息不足，请继续询问用户以获取更多信息，直到能够做出合理的推断。",
     }
@@ -227,7 +182,7 @@ def main(__login__obj):
     st.title('健康助手')
 
     st.sidebar.title("选择功能")
-    function_option = ["皮肤病识别与治疗", "推荐就诊科室", "疾病推断"]
+    function_option = ["推荐就诊科室", "疾病推断"]
     chosen_function = st.sidebar.selectbox("功能", function_option)
 
     # 侧边栏输入 API 密钥和设置
@@ -267,43 +222,8 @@ def main(__login__obj):
         st.session_state["messages"] = []
         st.session_state["last_chosen_function"] = chosen_function
 
-    # 在功能“皮肤病识别与治疗”中更新详细提示
-    if chosen_function == "皮肤病识别与治疗":
-        uploaded_file = st.file_uploader("上传皮肤病图片", type=["jpg", "jpeg", "png"])
-        if uploaded_file is not None:
-            if uploaded_file != st.session_state["uploaded_file"]:
-                reset_classification_state()
-                st.session_state["uploaded_file"] = uploaded_file
-
-            class_names = ['光化性角化病', '基底细胞癌', '皮肤纤维瘤', '黑色素瘤', '痣', '色素性良性角化病',
-                           '脂溢性角化病', '鳞状细胞癌', '血管病变']  # 示例中文类别名称
-            st.image(uploaded_file, caption="上传的皮肤病图片", use_column_width=True)
-            if not st.session_state["image_classified"]:
-                with st.spinner("识别中..."):
-                    result = classify_image(class_names, uploaded_file)
-                    st.session_state["classification_result"] = result
-                    st.session_state["image_classified"] = True
-
-                    diagnosis_message = f"""
-    分类结果: {result['class_name']}。
-    请提供详细信息，包括：
-    - 这种皮肤病的常见症状
-    - 可能的致病原因
-    - 常见的治疗方法
-    - 日常护理建议
-    """
-                    st.session_state["messages"].append({"role": "user", "content": diagnosis_message})
-                    st.chat_message("user").write(diagnosis_message)
-                    yi_stream_response(YI_API_KEY, "yi-large-rag", st.session_state["messages"], username)
-
-        if st.session_state["classification_result"] is not None:
-            result = st.session_state["classification_result"]
-            st.write(f"分类结果: {result['class_name']}")
-            st.write("概率分布:")
-            st.json(result["probabilities"])
-
     # 在功能“推荐就诊科室”中更新详细提示
-    elif chosen_function == "推荐就诊科室":
+    if chosen_function == "推荐就诊科室":
         symptoms = st.text_area("请输入您的症状描述", "详细描述您的症状...")
         if st.button("推荐科室"):
             if symptoms.strip():
@@ -352,4 +272,3 @@ def main(__login__obj):
 
 if __name__ == "__main__":
     main(__login__obj)
-

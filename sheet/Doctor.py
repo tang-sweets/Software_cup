@@ -1,8 +1,5 @@
 import os
-import torch
 from PIL import Image
-from torchvision import transforms
-from torchvision.models import resnet18
 import requests
 import json
 import streamlit as st

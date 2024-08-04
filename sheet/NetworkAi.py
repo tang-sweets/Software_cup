@@ -233,6 +233,8 @@ def main(__login__obj):
         st.session_state["messages"] = []
     if "preset_sent" not in st.session_state:
         st.session_state["preset_sent"] = False
+    if "selected_model" not in st.session_state:
+        st.session_state["selected_model"] = "SkyChat-3.0"  # 设置一个默认值
 
     # 获取用户名
     username = __login__obj.get_username()

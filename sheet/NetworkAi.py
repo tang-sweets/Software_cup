@@ -18,7 +18,7 @@ YI_API_KEY = st.secrets["api"]["Yi_key"]
 BAICHUAN_API_KEY = st.secrets["api"]["Baichuan_key"]
 BAICHUAN_API_URL = "https://api.baichuan-ai.com/v1/"
 
-def record_audio(file_path, duration=30, fs=44100):
+def record_audio(file_path, duration=10, fs=44100):
     """录音函数，将录音保存到指定文件路径"""
     recording = sd.rec(int(duration * fs), samplerate=fs, channels=2)
     sd.wait()  # 等待录音结束
